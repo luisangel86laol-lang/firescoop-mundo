@@ -209,6 +209,7 @@ def one(entry, out):
     ap["lat"] = entry["Latitude"]
     ap["lon"] = entry["Longitude"]
     ap["scenery"] = sid
+    ap["author"] = sc.get("userName") or ""          # crédito: el autor del escenario en el Gateway
     raw = json.dumps(ap, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     comp = zlib.compressobj(9, zlib.DEFLATED, -15)
     data = comp.compress(raw) + comp.flush()
