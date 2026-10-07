@@ -4,3 +4,4 @@
 # Las líneas que empiezan por # no cuentan.
 europe/portugal
 europe/spain
+africa/canary-islands
