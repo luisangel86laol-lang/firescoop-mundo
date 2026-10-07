@@ -1,11 +1,14 @@
 # Firescoop · mundo
-# Baja los mapas de OpenStreetMap de Portugal y España (Geofabrik), los parte en cuadrículas para
-# el juego y los publica en GitHub Pages:  https://<usuario>.github.io/firescoop-mundo/v1/
-# Se lanza a mano (Actions → Mundo → Run workflow) y solo el día 1 de cada mes.
+# Baja de Geofabrik los mapas de OpenStreetMap de los países de paises.txt, los parte en
+# cuadrículas para el juego y los publica en GitHub Pages:  https://<usuario>.github.io/firescoop-mundo/v1/
+# Se lanza solo al cambiar paises.txt, a mano (Actions → Mundo → Run workflow) y el día 1 de cada mes.
 name: Mundo
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - paises.txt
   schedule:
     - cron: "17 3 1 * *"
 
@@ -35,13 +38,15 @@ jobs:
       - name: Bajar los mapas de OpenStreetMap
         run: |
           mkdir -p pbf
-          for p in portugal spain; do
-            curl -L --fail --retry 3 -o "pbf/$p.osm.pbf" "https://download.geofabrik.de/europe/$p-latest.osm.pbf"
-            ls -lh "pbf/$p.osm.pbf"
+          grep -v '^[[:space:]]*#' paises.txt | tr -d '\r' | while read -r p || [ -n "$p" ]; do
+            [ -z "$p" ] && continue
+            f="pbf/$(echo "$p" | tr '/' '_').osm.pbf"
+            curl -L --fail --retry 3 -o "$f" "https://download.geofabrik.de/$p-latest.osm.pbf"
+            ls -lh "$f"
           done
 
       - name: Hacer las cuadrículas
-        run: python mundo/hacer_mundo.py pbf/portugal.osm.pbf pbf/spain.osm.pbf --salida public/v1
+        run: python mundo/hacer_mundo.py pbf/*.osm.pbf --salida public/v1
 
       - uses: actions/configure-pages@v5
 

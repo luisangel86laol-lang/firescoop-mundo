@@ -1,0 +1,6 @@
+# Países que publica Firescoop · mundo
+# Una línea por país, tal como aparece en https://download.geofabrik.de
+# (lo que va entre "download.geofabrik.de/" y "-latest.osm.pbf").
+# Las líneas que empiezan por # no cuentan.
+europe/portugal
+europe/spain
