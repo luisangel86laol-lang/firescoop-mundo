@@ -48,6 +48,12 @@ jobs:
       - name: Hacer las cuadrículas
         run: python mundo/hacer_mundo.py pbf/*.osm.pbf --salida public/v1
 
+      # Aeródromos del X-Plane Scenery Gateway (GPL, archivos aparte). Si el Gateway falla, se publica igual el resto.
+      - name: Aeródromos del Gateway
+        continue-on-error: true
+        timeout-minutes: 60
+        run: python mundo/hacer_aeropuertos.py public/v1
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
