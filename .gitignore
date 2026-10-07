@@ -1,0 +1,7 @@
+# Archivos del Mac y de pruebas: nunca al repo
+.DS_Store
+__pycache__/
+*.pyc
+# Mapas bajados y cuadrículas hechas en local (las publica GitHub)
+pbf/
+public/
