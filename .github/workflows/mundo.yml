@@ -1,0 +1,60 @@
+# Firescoop · mundo
+# Baja los mapas de OpenStreetMap de Portugal y España (Geofabrik), los parte en cuadrículas para
+# el juego y los publica en GitHub Pages:  https://<usuario>.github.io/firescoop-mundo/v1/
+# Se lanza a mano (Actions → Mundo → Run workflow) y solo el día 1 de cada mes.
+name: Mundo
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 1 * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar pyosmium
+        run: pip install osmium
+
+      - name: Bajar los mapas de OpenStreetMap
+        run: |
+          mkdir -p pbf
+          for p in portugal spain; do
+            curl -L --fail --retry 3 -o "pbf/$p.osm.pbf" "https://download.geofabrik.de/europe/$p-latest.osm.pbf"
+            ls -lh "pbf/$p.osm.pbf"
+          done
+
+      - name: Hacer las cuadrículas
+        run: python mundo/hacer_mundo.py pbf/portugal.osm.pbf pbf/spain.osm.pbf --salida public/v1
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
