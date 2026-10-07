@@ -104,7 +104,7 @@ def flat(pts):
 
 
 def parse_apt(text):
-    ap = {"pav": [], "lin": [], "park": [], "sock": [], "rwy": []}
+    ap = {"pav": [], "lin": [], "park": [], "parkNames": [], "sock": [], "rwy": []}
     mode = None          # "pav" | "lin"
     cur = None           # pavimento o línea en curso
     ring = []            # nodos del anillo / tramo en curso
@@ -171,8 +171,10 @@ def parse_apt(text):
                 end_ring(False)
         elif code == 1300 and len(f) >= 4:
             ap["park"].append([round(float(f[1]), 6), round(float(f[2]), 6), round(float(f[3]), 1)])
+            ap["parkNames"].append(" ".join(f[6:]))
         elif code == 15 and len(f) >= 4:
             ap["park"].append([round(float(f[1]), 6), round(float(f[2]), 6), round(float(f[3]), 1)])
+            ap["parkNames"].append(" ".join(f[4:]))
         elif code == 19 and len(f) >= 3:
             ap["sock"].append([round(float(f[1]), 6), round(float(f[2]), 6)])
         else:
@@ -193,7 +195,8 @@ def one(entry, out):
     try:
         sc = get_json(f"{API}/scenery/{sid}")["scenery"]
         z = zipfile.ZipFile(io.BytesIO(base64.b64decode(sc["masterZipBlob"])))
-        name = next((n for n in z.namelist() if n.lower().endswith(".dat")), None)
+        name = next((n for n in z.namelist() if n.lower().endswith(".dat")
+                     and "__MACOSX" not in n and not os.path.basename(n).startswith("._")), None)
         if not name:
             return None
         ap = parse_apt(z.read(name).decode("utf-8", "replace"))
