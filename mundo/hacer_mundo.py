@@ -10,6 +10,8 @@ Cada cuadrícula lleva:
   - pistas, calles de rodaje, plataformas, helipuertos y mangas de viento
   - carreteras (autovías a locales) con sentido único, puentes y túneles
   - núcleos (ciudad, pueblo, aldea) e iglesias
+  - tendidos eléctricos (alta tensión y líneas de distribución) con sus apoyos, y aerogeneradores
+    (8-oct: para que los cables y molinos salgan en el juego donde están de verdad)
 Va comprimida (DEFLATE sin cabecera, lo que lee Apple con `.zlib`) en  v1/t/<i>_<j>.jz,
 con i = floor(lat × 5) y j = floor(lon × 5), y un índice  v1/indice.json.
 
@@ -164,7 +166,7 @@ class Tiles:
 def read(path, tiles, stats):
     fp = (osmium.FileProcessor(path)
           .with_locations(storage="sparse_mem_array")
-          .with_filter(osmium.filter.KeyFilter("building", "highway", "aeroway", "place", "amenity")))
+          .with_filter(osmium.filter.KeyFilter("building", "highway", "aeroway", "place", "amenity", "power")))
     for o in fp:
         tags = o.tags
         if o.is_node():
@@ -182,6 +184,12 @@ def read(path, tiles, stats):
                 tiles.add(key, "s", [r5(lat), r5(lon)])
             elif aero == "helipad":
                 tiles.add(key, "h", [r5(lat), r5(lon)])
+            elif tags.get("power") == "generator" and (tags.get("generator:source") == "wind"
+                                                       or tags.get("generator:method") == "wind_turbine"):
+                # Aerogenerador: [lat, lon, altura total (m, 0 = sin dato), diámetro del rotor (m, 0 = sin dato)]
+                tiles.add(key, "g", [r5(lat), r5(lon), round(num(tags.get("height")) or 0, 1),
+                                     round(num(tags.get("rotor:diameter")) or 0, 1)])
+                stats["molinos"] = stats.get("molinos", 0) + 1
             continue
         if not o.is_way():
             continue
@@ -231,6 +239,26 @@ def read(path, tiles, stats):
                 tiles.add(cur, "r", {"k": hw, "o": int(oneway), "b": int(bridge), "t": int(tunnel),
                                      "pts": [[r5(x), r5(y)] for x, y in run]})
             stats["carreteras"] += 1
+        elif tags.get("power") in ("line", "minor_line"):
+            # Tendido eléctrico: los nodos son los apoyos. k = 0 alta tensión · 1 distribución;
+            # v = tensión en kV (la más alta si hay varias; 0 = sin dato)
+            kv = 0
+            for part in tags.get("voltage", "").replace(",", ";").split(";"):
+                val = num(part)
+                if val:
+                    kv = max(kv, int(val / 1000) if val >= 1000 else int(val))
+            kind = 0 if tags.get("power") == "line" else 1
+            run, cur = [pts[0]], None
+            for a, b in zip(pts, pts[1:]):
+                key = tile_of((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+                if cur is not None and key != cur:
+                    tiles.add(cur, "e", {"k": kind, "v": kv, "pts": [[r5(x), r5(y)] for x, y in run]})
+                    run = [a]
+                cur = key
+                run.append(b)
+            if cur is not None and len(run) >= 2:
+                tiles.add(cur, "e", {"k": kind, "v": kv, "pts": [[r5(x), r5(y)] for x, y in run]})
+            stats["tendidos"] = stats.get("tendidos", 0) + 1
         elif aero in AERO_WAYS:
             lat0 = sum(p[0] for p in pts) / len(pts)
             lon0 = sum(p[1] for p in pts) / len(pts)
@@ -269,7 +297,7 @@ def write(tmp, out, made):
     index = {}
     total = 0
     names = {"b": "buildings", "R": "runways", "T": "taxiways", "A": "aprons", "h": "helipads", "s": "windsocks",
-             "r": "roads", "p": "places", "c": "churches"}
+             "r": "roads", "p": "places", "c": "churches", "e": "power", "g": "turbines"}
     for fname in sorted(os.listdir(tmp)):
         if not fname.endswith(".txt"):
             continue
