@@ -104,7 +104,7 @@ def flat(pts):
 
 
 def parse_apt(text):
-    ap = {"pav": [], "lin": [], "park": [], "parkNames": [], "sock": [], "rwy": []}
+    ap = {"pav": [], "lin": [], "park": [], "parkNames": [], "parkFor": [], "sock": [], "rwy": []}
     mode = None          # "pav" | "lin"
     cur = None           # pavimento o línea en curso
     ring = []            # nodos del anillo / tramo en curso
@@ -172,9 +172,11 @@ def parse_apt(text):
         elif code == 1300 and len(f) >= 4:
             ap["park"].append([round(float(f[1]), 6), round(float(f[2]), 6), round(float(f[3]), 1)])
             ap["parkNames"].append(" ".join(f[6:]))
+            ap["parkFor"].append(f[5] if len(f) > 5 else "all")   # heavy|jets|turboprops|props|helos|fighters|all
         elif code == 15 and len(f) >= 4:
             ap["park"].append([round(float(f[1]), 6), round(float(f[2]), 6), round(float(f[3]), 1)])
             ap["parkNames"].append(" ".join(f[4:]))
+            ap["parkFor"].append("all")
         elif code == 19 and len(f) >= 3:
             ap["sock"].append([round(float(f[1]), 6), round(float(f[2]), 6)])
         else:

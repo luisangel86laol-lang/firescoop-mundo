@@ -144,8 +144,10 @@ class Tiles:
         os.makedirs(tmp, exist_ok=True)
         self.buf = {}
         self.count = 0
+        self.touched = set()           # cuadrículas del país que se está leyendo (para paises.json)
 
     def add(self, key, kind, item):
+        self.touched.add(key)
         self.buf.setdefault(key, []).append(kind + "|" + json.dumps(item, separators=(",", ":")))
         self.count += 1
         if self.count >= FLUSH:
@@ -297,6 +299,36 @@ def write(tmp, out, made):
     return len(index), total
 
 
+# Nombres de los países en los 4 idiomas del juego (los que no estén aquí salen con el nombre de Geofabrik)
+NOMBRES = {
+    "europe/portugal": ("Portugal", "Portugal", "Portugal", "Portugal"),
+    "europe/spain": ("España", "Spain", "Espanha", "Espagne"),
+    "africa/canary-islands": ("Canarias", "Canary Islands", "Canárias", "Canaries"),
+    "europe/france": ("Francia", "France", "França", "France"),
+    "europe/italy": ("Italia", "Italy", "Itália", "Italie"),
+    "europe/greece": ("Grecia", "Greece", "Grécia", "Grèce"),
+    "europe/andorra": ("Andorra", "Andorra", "Andorra", "Andorre"),
+    "europe/croatia": ("Croacia", "Croatia", "Croácia", "Croatie"),
+    "europe/turkey": ("Turquía", "Turkey", "Turquia", "Turquie"),
+    "europe/cyprus": ("Chipre", "Cyprus", "Chipre", "Chypre"),
+    "africa/morocco": ("Marruecos", "Morocco", "Marrocos", "Maroc"),
+    "north-america/canada": ("Canadá", "Canada", "Canadá", "Canada"),
+    "north-america/us/california": ("California", "California", "Califórnia", "Californie"),
+    "australia-oceania/australia": ("Australia", "Australia", "Austrália", "Australie"),
+    "south-america/chile": ("Chile", "Chile", "Chile", "Chili"),
+}
+
+
+def country_id(path):
+    """pbf/europe_portugal.osm.pbf → europe/portugal (el nombre de paises.txt)."""
+    base = os.path.basename(path)
+    for suf in (".osm.pbf", "-latest.osm.pbf", ".pbf"):
+        if base.endswith(suf):
+            base = base[: -len(suf)]
+            break
+    return base.replace("_", "/")
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     out = "public/v1"
@@ -311,14 +343,40 @@ def main():
     shutil.rmtree(tmp, ignore_errors=True)
     tiles = Tiles(tmp)
     stats = {"edificios": 0, "carreteras": 0, "pistas": 0}
+    per_country = []
     for path in args:
         t0 = time.time()
         print(f"· {path}…", flush=True)
+        tiles.touched = set()
         read(path, tiles, stats)
         tiles.flush()
+        per_country.append((country_id(path), set(tiles.touched)))
         print(f"  {stats}  ({time.time() - t0:.0f} s)", flush=True)
     n, total = write(tmp, out, made)
     shutil.rmtree(tmp, ignore_errors=True)
+    # 8-oct: lista de países para la sección «Mapas» del juego (descargas sin conexión). Las cuadrículas de
+    # frontera salen en los dos países; el juego no las baja dos veces. hacer_paquetes.py añade luego los
+    # aeródromos y el paquete de cada país.
+    with open(os.path.join(out, "indice.json"), encoding="utf-8") as f:
+        sizes = json.load(f)["tiles"]
+    countries = []
+    for cid, keys in per_country:
+        keys = sorted(k for k in (f"{i}_{j}" for i, j in keys) if k in sizes)
+        if not keys:
+            continue
+        ij = [tuple(int(v) for v in k.split("_")) for k in keys]
+        es, en, pt, fr = NOMBRES.get(cid) or (cid.split("/")[-1].replace("-", " ").title(),) * 4
+        countries.append({
+            "id": cid,
+            "name": {"es": es, "en": en, "pt": pt, "fr": fr},
+            "bbox": [min(i for i, _ in ij) / SCALE, min(j for _, j in ij) / SCALE,
+                     (max(i for i, _ in ij) + 1) / SCALE, (max(j for _, j in ij) + 1) / SCALE],
+            "tiles": keys,
+            "bytes": sum(sizes[k] for k in keys),
+        })
+    with open(os.path.join(out, "paises.json"), "w", encoding="utf-8") as f:
+        json.dump({"v": 1, "made": made, "countries": countries}, f, separators=(",", ":"), ensure_ascii=False)
+    print(f"✓ paises.json: {', '.join(c['id'] for c in countries)}")
     # Portada con la atribución (la licencia ODbL lo pide)
     root = os.path.dirname(os.path.abspath(out))
     with open(os.path.join(root, "index.html"), "w", encoding="utf-8") as f:

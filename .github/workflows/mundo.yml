@@ -54,6 +54,11 @@ jobs:
         timeout-minutes: 60
         run: python mundo/hacer_aeropuertos.py public/v1
 
+      # Un paquete por país para la sección «Mapas» del juego (descargas sin conexión)
+      - name: Paquetes por país
+        continue-on-error: true
+        run: python mundo/hacer_paquetes.py public/v1
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
