@@ -2,6 +2,8 @@
 # Una línea por país, tal como aparece en https://download.geofabrik.de
 # (lo que va entre "download.geofabrik.de/" y "-latest.osm.pbf").
 # Las líneas que empiezan por # no cuentan.
+# Al publicar, el juego baja también los aeródromos de OurAirports de cada país (sin build nueva).
+# Si el país no está en NOMBRES e ISO de mundo/hacer_mundo.py, añádelo allí (nombre y código ISO).
 europe/portugal
 europe/spain
 africa/canary-islands

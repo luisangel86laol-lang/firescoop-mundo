@@ -347,6 +347,16 @@ NOMBRES = {
     "south-america/argentina": ("Argentina", "Argentina", "Argentina", "Argentine"),
 }
 
+# País de OurAirports (ISO 3166) de cada mapa: el juego baja los aeródromos de esos países, dentro
+# de la caja de cada mapa (California, sin el resto de EE. UU.). Añadir aquí el de cada país nuevo.
+ISO = {
+    "europe/portugal": "PT", "europe/spain": "ES", "africa/canary-islands": "ES",
+    "south-america/chile": "CL", "south-america/argentina": "AR",
+    "europe/france": "FR", "europe/italy": "IT", "europe/greece": "GR", "europe/andorra": "AD",
+    "europe/croatia": "HR", "europe/turkey": "TR", "europe/cyprus": "CY", "africa/morocco": "MA",
+    "north-america/canada": "CA", "north-america/us/california": "US", "australia-oceania/australia": "AU",
+}
+
 
 def country_id(path):
     """pbf/europe_portugal.osm.pbf → europe/portugal (el nombre de paises.txt)."""
@@ -402,6 +412,7 @@ def main():
                      (max(i for i, _ in ij) + 1) / SCALE, (max(j for _, j in ij) + 1) / SCALE],
             "tiles": keys,
             "bytes": sum(sizes[k] for k in keys),
+            **({"iso": ISO[cid]} if cid in ISO else {}),
         })
     with open(os.path.join(out, "paises.json"), "w", encoding="utf-8") as f:
         json.dump({"v": 1, "made": made, "countries": countries}, f, separators=(",", ":"), ensure_ascii=False)
