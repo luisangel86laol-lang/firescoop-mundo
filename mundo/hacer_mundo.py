@@ -344,6 +344,7 @@ NOMBRES = {
     "north-america/us/california": ("California", "California", "Califórnia", "Californie"),
     "australia-oceania/australia": ("Australia", "Australia", "Austrália", "Australie"),
     "south-america/chile": ("Chile", "Chile", "Chile", "Chili"),
+    "south-america/argentina": ("Argentina", "Argentina", "Argentina", "Argentine"),
 }
 
 

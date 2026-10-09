@@ -5,3 +5,5 @@
 europe/portugal
 europe/spain
 africa/canary-islands
+south-america/chile
+south-america/argentina
